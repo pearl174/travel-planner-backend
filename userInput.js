@@ -4,7 +4,7 @@ const {
     createPool
 } = require('mysql');
 
-const pool  = createPool({
+const pool = createPool({
     host     : 'localhost',
     user     : 'root',
     password : '1234',
@@ -68,3 +68,35 @@ app.get('/getDestinations', (req, res) => {
       }
   })
 })
+
+// have to extract destination id from the url using what again?
+// have to have a get request and get the respective places for that particular destination
+app.get('/getDestinations/:id', (req, res) => {
+    const id = req.params.id;
+    pool.query("SELECT * FROM Places WHERE Destinations_Id = ?", [id], (error, results, fields) => {
+      if (error) {
+        res.status(500).json({ error: "An error occurred while querying the database"});
+      }
+      else if (results.length > 0) {
+        res.json(results); // Return places if found
+      } else {
+        res.status(404).json({ error: "No places found for the given destination ID" });
+      }
+    })
+    // res.send(`Received id: ${id}`); receiving correct id in postman!
+})
+
+
+//     if (error) {
+//       console.error("Error querying database:", error);
+//       res.status(500).json({ error: "An error occurred while querying the database"});
+//     }
+//     else {
+//       if (results.length > 0) {
+//         res.json(results); // Return places if found
+//       } else {
+//         res.status(404).json({ error: "No places found for the given destination ID" });
+//       }
+//     }
+//   });
+// });
