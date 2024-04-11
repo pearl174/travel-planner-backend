@@ -47,7 +47,7 @@ app.post('/signup', (req, res) => {
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
     // Example SQL select query to check username and password
-    pool.query("SELECT * FROM users WHERE email = ? AND password = ?", [email, password], (error, results, fields) => {
+    pool.query("SELECT * FROM users WHERE email = (?) AND password = (?)", [email, password], (error, results, fields) => {
       if (error) {
         res.status(500).json({ error: "An error occurred while querying the database" });
       } else {
@@ -80,8 +80,8 @@ app.get('/getUserId/:mail', (req, res) => {
 // on login
 // getting all the destinations
 app.get('/getDestinations', (req, res) => {
-  pool.query("SELECT * FROM Destinations", (err, result, fields) => {
-      if (err) {
+  pool.query("SELECT * FROM Destinations", (error, result, fields) => {
+      if (error) {
         res.status(500).json({ error: "An error occurred while querying the database" });
       }
       else {
@@ -94,7 +94,7 @@ app.get('/getDestinations', (req, res) => {
 // have to have a get request and get the respective places for that particular destination
 app.get('/getDestinations/:id', (req, res) => { 
     const id = req.params.id;
-    pool.query("SELECT * FROM Places WHERE Destinations_Id = ?", [id], (error, results, fields) => {
+    pool.query("SELECT * FROM Places WHERE Destinations_Id = (?)", [id], (error, results, fields) => {
       if (error) {
         res.status(500).json({ error: "An error occurred while querying the database"});
       }
@@ -106,3 +106,39 @@ app.get('/getDestinations/:id', (req, res) => {
     })
     // res.send(`Received id: ${id}`); receiving correct id in postman!
 })
+
+// when the user adds all the places to his itinerary
+app.post('/insertPlaces', (req, res) => {
+    const { uId, placeId, date } = req.body;
+    pool.query("INSERT INTO Itinerary (User_Id) VALUES (?)", [userId], (error, results, fields) => {
+      if (error) {
+        res.status(500).json({ error: "An error occurred while querying the database"});
+      } 
+    })
+    pool.query("SELECT Itinerary_Id FROM Itinerary WHERE User_Id = (?)", [userId], (error, results, fields) => {
+      if (error) {
+        res.status(500).json({ error: "An error occurred while querying the database"});
+      }
+    })
+    pool.query("INSERT INTO Day_to_Day VALUES (?, ?)")
+})
+// result.itinerary id do ig. check postman
+// then insert that with the data into the day to day table. although it will be an array ig. so big query???
+// getHotels??
+
+// app.post('/login', (req, res) => {
+//   const { email, password } = req.body;
+//   pool.query("SELECT * FROM users WHERE email = (?) AND password = (?)", [email, password], (error, results, fields) => {
+//     if (error) {
+//       res.status(500).json({ error: "An error occurred while querying the database" });
+//     } else {
+//       if (results.length > 0) {
+//         // Username and password combination exists
+//         res.status(200).json({ success: true, message: "Username and password combination exists" });
+//       } else {
+//         // Username and password combination doesn't exist
+//         res.status(404).json({ error: "Username and password combination does not exist" });
+//       }
+//     }
+//   });
+// });
