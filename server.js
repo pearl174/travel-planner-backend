@@ -30,16 +30,18 @@ app.listen(PORT, function (err) {
 });
 
 let userId = 5; // will get updated when the user logs in 
-// keeping 1 while testing with postman, remove when integrating
+// keeping 5 while testing with postman, remove when integrating
+let itineraryId = -1;
+let destinationId = -1;
 
 // route definition, where data(user credentials) to be received
 app.post('/signup', (req, res) => {
     const data = req.body;
     pool.query("INSERT INTO Users (User_Name, Password, Email) VALUES (?, ?, ?)", [data.name, data.password, data.email], (error, results, fields) => {
         if (error) {
-            res.status(500).json({ error: "An error occurred while inserting data into the database"});
+            res.status(500).json({ error: "An error occurred while inserting data into the database" });
         } else {
-            res.status(200).json({ success: true, message: "User credentials successfully inserted into the table"});
+            res.status(200).json({ success: true, message: "User credentials successfully inserted into the table" });
         }
     });
 });
@@ -97,7 +99,7 @@ app.get('/getDestinations/:id', (req, res) => {
     const id = req.params.id;
     pool.query("SELECT * FROM Places WHERE Destinations_Id = (?)", [id], (error, results, fields) => {
       if (error) {
-        res.status(500).json({ error: "An error occurred while querying the database"});
+        res.status(500).json({ error: "An error occurred while querying the database" });
       }
       else if (results.length > 0) {
         res.json(results); // Return places if found
@@ -119,42 +121,126 @@ app.post('/insertPlaces', (req, res) => {
     pool.query("INSERT INTO Itinerary (User_Id) VALUES (?)", [userId], (error, results, fields) => {
       if (error) {
         console.log(error)
-        return res.status(500).json({ error: "An error occurred while initializing the itinerary table"});
+        return res.status(500).json({ error: "An error occurred while initializing the itinerary table" });
       } 
-      pool.query("SELECT Itinerary_Id FROM Itinerary WHERE User_Id = (?)", [userId], (error, results, fields) => {
+      pool.query("SELECT Itinerary_Id FROM Itinerary WHERE User_Id = (?) AND Hotel_Id IS NULL", [userId], (error, results, fields) => {
+        // itinerary id we save here in a global variable 
+        // another issue i believe is when the user might have multiple records for the itinerary
+        // so we sort of cheat ig
+        // this does not work if the user stops adding things after a certain point, or leaves the itinerary incomplete
         if (error) {
-          return res.status(500).json({ error: "An error occurred while querying the itineraryId from the database"});
+          return res.status(500).json({ error: "An error occurred while querying the itineraryId from the database" });
         }
         console.log(results[0].Itinerary_Id)
-        const itineraryId = results[0].Itinerary_Id;
+        itineraryId = results[0].Itinerary_Id;
         (async () => {
           for (const placeData of placesData) {
               const { placeId, date } = placeData;
               try {
                   await pool.query("INSERT INTO Day_to_Day (Places_Id, Date, Itinerary_Id) VALUES (?, ?, ?)", [placeId, date, itineraryId]);
               } catch (error) {
-                  return res.status(500).json({ error: "An error occurred while inserting data into the Day_to_Day table"});
+                  return res.status(500).json({ error: "An error occurred while inserting data into the Day_to_Day table" });
               }
           }
 
           // Send the response after all queries have completed successfully
-          res.status(200).json({ success: true, message: "Values inserted successfully into the Day_to_Day table"});
+          res.status(200).json({ success: true, message: "Values inserted successfully into the Day_to_Day table" });
       })();
       });
     });
 });
 
-// getHotels??
 app.get('/getHotels/:id', (req, res) => {
-  const dest_id = req.params.id
-  pool.query("SELECT * FROM Hotels WHERE Destinations_Id = (?)", [dest_id], (error, results, fields) => {
+  destinationId = req.params.id
+  pool.query("SELECT * FROM Hotels WHERE Destinations_Id = (?)", [destinationId], (error, results, fields) => {
     if (error) {
-      res.status(500).json({ error: "An error occurred while querying hotels from the database"});
+      res.status(500).json({ error: "An error occurred while querying hotels from the database" });
     }
     else if (results.length > 0) {
       res.json(results);
     } else {
       res.status(404).json({ error: "No places found with the given destination ID" });
     }
-  })
+  });
 });
+
+// resetting password
+app.post('/resetPassword', (req, res) => {
+  const { email, password } = req.body;
+  pool.query("UPDATE Users SET Password = (?) WHERE Email = (?)", [password, email], (error, results, fields) => {
+    if (error) {
+      res.status(500).json({ error: "An error occurred while updating the password" });
+    } else {
+      console.log(results)
+      res.status(200).json({ success: true, message: "User password successfully updated" })
+    }
+  });
+});
+
+// hotel sort, pop price
+app.get('/getHotels/:id/:key', (req, res) => {
+  const { id, key } = req.params;
+  if (key === "lowtohighprice") {
+    pool.query("SELECT * FROM Hotels WHERE Destinations_Id = (?) ORDER BY Price", [id], (error, results, fields) => {
+      if (error) {
+        res.status(500).json({ error: "An error occurred while querying the database for sorted data" });
+      }
+      else {
+        res.send(results);
+      }
+    });
+  } else if (key === "hightolowprice") {
+    pool.query("SELECT * FROM Hotels WHERE Destinations_Id = (?) ORDER BY Price DESC", [id], (error, results, fields) => {
+      if (error) {
+        res.status(500).json({ error: "An error occurred while querying the database for sorted data" });
+      }
+      else {
+        res.send(results);
+      }
+    });
+  } else if (key === "lowtohighrating") {
+    pool.query("SELECT * FROM Hotels WHERE Destinations_Id = (?) ORDER BY Popularity", [id], (error, results, fields) => {
+      if (error) {
+        res.status(500).json({ error: "An error occurred while querying the database for sorted data" });
+      }
+      else {
+        res.send(results);
+      }
+    });
+  }
+  else if (key === "hightolowrating") {
+    pool.query("SELECT * FROM Hotels WHERE Destinations_Id = (?) ORDER BY Popularity DESC", [id], (error, results, fields) => {
+      if (error) {
+        res.status(500).json({ error: "An error occurred while querying the database for sorted data" });
+      }
+      else {
+        res.send(results);
+      }
+    });
+  }
+  else {
+    console.log("Key value did not match with any of the conditions")
+  }
+});
+
+// itinerary entirely pop
+// app.post('/updateItinerary', (req, res) => {
+//   const hotelId = req.body;
+//   const
+// });
+
+app.post('/resetPassword', (req, res) => {
+  const { email, password } = req.body;
+  pool.query("UPDATE Users SET Password = (?) WHERE Email = (?)", [password, email], (error, results, fields) => {
+    if (error) {
+      res.status(500).json({ error: "An error occurred while updating the password" });
+    } else {
+      console.log(results)
+      res.status(200).json({ success: true, message: "User password successfully updated" })
+    }
+  });
+});
+// hotel booking pachi
+// current itineraries and then clicking on one and then joining tables to display details
+
+// TEST INSERTPLACES AGAIN
