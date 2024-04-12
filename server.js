@@ -29,7 +29,8 @@ app.listen(PORT, function (err) {
   console.log("Server listening on PORT", PORT);
 });
 
-let userId = -1; // will get updated when the user logs in 
+let userId = 5; // will get updated when the user logs in 
+// keeping 1 while testing with postman, remove when integrating
 
 // route definition, where data(user credentials) to be received
 app.post('/signup', (req, res) => {
@@ -108,20 +109,40 @@ app.get('/getDestinations/:id', (req, res) => {
 })
 
 // when the user adds all the places to his itinerary
+// initializing the itinerary record corresponding to this itinerary
+// then getting the id from this record and inserting into the day_to_day table
 app.post('/insertPlaces', (req, res) => {
-    const { uId, placeId, date } = req.body;
+    const placesData = req.body; 
+
+    // using uId for testing at the very least because for postman
+    // the request was not made for the userId and its value is hence -1 for now
     pool.query("INSERT INTO Itinerary (User_Id) VALUES (?)", [userId], (error, results, fields) => {
       if (error) {
-        res.status(500).json({ error: "An error occurred while querying the database"});
+        console.log(error)
+        return res.status(500).json({ error: "An error occurred while initializing the itinerary table"});
       } 
-    })
-    pool.query("SELECT Itinerary_Id FROM Itinerary WHERE User_Id = (?)", [userId], (error, results, fields) => {
-      if (error) {
-        res.status(500).json({ error: "An error occurred while querying the database"});
-      }
-    })
-    pool.query("INSERT INTO Day_to_Day VALUES (?, ?)")
-})
+      pool.query("SELECT Itinerary_Id FROM Itinerary WHERE User_Id = (?)", [userId], (error, results, fields) => {
+        if (error) {
+          return res.status(500).json({ error: "An error occurred while querying the itineraryId from the database"});
+        }
+        console.log(results[0].Itinerary_Id)
+        const itineraryId = results[0].Itinerary_Id;
+        (async () => {
+          for (const placeData of placesData) {
+              const { placeId, date } = placeData;
+              try {
+                  await pool.query("INSERT INTO Day_to_Day (Places_Id, Date, Itinerary_Id) VALUES (?, ?, ?)", [placeId, date, itineraryId]);
+              } catch (error) {
+                  return res.status(500).json({ error: "An error occurred while inserting data into the Day_to_Day table"});
+              }
+          }
+
+          // Send the response after all queries have completed successfully
+          res.status(200).json({ success: true, message: "Values inserted successfully into the Day_to_Day table"});
+      })();
+      });
+    });
+});
 // result.itinerary id do ig. check postman
 // then insert that with the data into the day to day table. although it will be an array ig. so big query???
 // getHotels??
