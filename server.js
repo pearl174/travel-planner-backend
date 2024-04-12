@@ -143,23 +143,18 @@ app.post('/insertPlaces', (req, res) => {
       });
     });
 });
-// result.itinerary id do ig. check postman
-// then insert that with the data into the day to day table. although it will be an array ig. so big query???
-// getHotels??
 
-// app.post('/login', (req, res) => {
-//   const { email, password } = req.body;
-//   pool.query("SELECT * FROM users WHERE email = (?) AND password = (?)", [email, password], (error, results, fields) => {
-//     if (error) {
-//       res.status(500).json({ error: "An error occurred while querying the database" });
-//     } else {
-//       if (results.length > 0) {
-//         // Username and password combination exists
-//         res.status(200).json({ success: true, message: "Username and password combination exists" });
-//       } else {
-//         // Username and password combination doesn't exist
-//         res.status(404).json({ error: "Username and password combination does not exist" });
-//       }
-//     }
-//   });
-// });
+// getHotels??
+app.get('/getHotels/:id', (req, res) => {
+  const dest_id = req.params.id
+  pool.query("SELECT * FROM Hotels WHERE Destinations_Id = (?)", [dest_id], (error, results, fields) => {
+    if (error) {
+      res.status(500).json({ error: "An error occurred while querying hotels from the database"});
+    }
+    else if (results.length > 0) {
+      res.json(results);
+    } else {
+      res.status(404).json({ error: "No places found with the given destination ID" });
+    }
+  })
+});
