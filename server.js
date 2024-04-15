@@ -29,7 +29,7 @@ app.listen(PORT, function (err) {
   console.log("Server listening on PORT", PORT);
 });
 
-let userId = 5; // will get updated when the user logs in 
+let userId = -1; // will get updated when the user logs in 
 // keeping 5 while testing with postman, remove when integrating
 let itineraryId = -1;
 let destinationId = -1;
@@ -73,7 +73,7 @@ app.get('/getUserId/:mail', (req, res) => {
     }
     else if (results.length > 0) {
       res.send(results);
-      userId = results[0].userId;
+      userId = results[0].User_Id; // was using the wrong key before
     } else {
       res.status(404).json({ error: "Error" });
     }
@@ -114,13 +114,11 @@ app.get('/getDestinations/:id', (req, res) => {
 // initializing the itinerary record corresponding to this itinerary
 // then getting the id from this record and inserting into the day_to_day table
 app.post('/insertPlaces', (req, res) => {
-    const placesData = req.body; 
-
+    const placesData = req.body.userData; 
     // using uId for testing at the very least because for postman
     // the request was not made for the userId and its value is hence -1 for now
     pool.query("INSERT INTO Itinerary (User_Id) VALUES (?)", [userId], (error, results, fields) => {
       if (error) {
-        console.log(error)
         return res.status(500).json({ error: "An error occurred while initializing the itinerary table" });
       } 
       pool.query("SELECT Itinerary_Id FROM Itinerary WHERE User_Id = (?) AND Hotel_Id IS NULL", [userId], (error, results, fields) => {
@@ -171,7 +169,6 @@ app.post('/resetPassword', (req, res) => {
     if (error) {
       res.status(500).json({ error: "An error occurred while updating the password" });
     } else {
-      console.log(results)
       res.status(200).json({ success: true, message: "User password successfully updated" })
     }
   });
@@ -224,23 +221,41 @@ app.get('/getHotels/:id/:key', (req, res) => {
 });
 
 // itinerary entirely pop
-// app.post('/updateItinerary', (req, res) => {
-//   const hotelId = req.body;
-//   const
-// });
-
-app.post('/resetPassword', (req, res) => {
-  const { email, password } = req.body;
-  pool.query("UPDATE Users SET Password = (?) WHERE Email = (?)", [password, email], (error, results, fields) => {
+// START HERE AGAIN. NEED TO FIND MIN AND MAX DATES FOR START AND END DATE
+// THEN UPDATE ITINERARY TABLE WITH THE VALUES
+app.post('/updateItinerary', (req, res) => {
+  const hotelId = req.body.Hotel_Id;
+  let maxDate, minDate;
+  // getting the dates
+  pool.query("SELECT MAX(Date), MIN(Date) FROM Day_to_Day WHERE Itinerary_Id = (?)", [itineraryId], (error, results, fields) => {
     if (error) {
-      res.status(500).json({ error: "An error occurred while updating the password" });
+      return res.status(500).json({ error: "An error occurred while getting max and min dates" });
     } else {
-      console.log(results)
-      res.status(200).json({ success: true, message: "User password successfully updated" })
+      maxDate = results[0]["MAX(Date)"];
+      minDate = results[0]["MIN(Date)"];
+      maxDate = new Date(maxDate).toISOString().split('T')[0];
+      minDate = new Date(minDate).toISOString().split('T')[0]; // as dates in format 2019-03-02T18:30:00.000Z
+      console.log(maxDate, minDate)
+      pool.query("UPDATE Itinerary SET Start_Date = (?), End_Date = (?), Hotel_Id = (?) WHERE Itinerary_Id = (?)", [minDate, maxDate, hotelId, itineraryId], (error, results, fields) => {
+        if (error) {
+          return res.status(500).json({ error: "An error occurred while trying to update the itinerary table" });
+        }
+        else {
+          console.log(results)
+          res.status(200).json({ success: true, message: "Itinerary data successfully updated"})
+        }
+      });
     }
   });
 });
+
+// /checkout route as well needed
 // hotel booking pachi
 // current itineraries and then clicking on one and then joining tables to display details
 
-// TEST INSERTPLACES AGAIN
+// destination ids and destination names have to send
+// app.get('/checkout', (req, res) => {
+//   pool.query
+// })
+
+// STILL NEED TO CHECK THAT UPDATEITINERARY IS WORKING EMNEM AS WELL

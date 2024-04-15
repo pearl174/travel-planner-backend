@@ -1,1 +1,1 @@
-console.log(error)
+pool.query("UPDATE ")
