@@ -220,9 +220,6 @@ app.get('/getHotels/:id/:key', (req, res) => {
   }
 });
 
-// itinerary entirely pop
-// START HERE AGAIN. NEED TO FIND MIN AND MAX DATES FOR START AND END DATE
-// THEN UPDATE ITINERARY TABLE WITH THE VALUES
 app.post('/updateItinerary', (req, res) => {
   const hotelId = req.body.Hotel_Id;
   let maxDate, minDate;
@@ -249,13 +246,18 @@ app.post('/updateItinerary', (req, res) => {
   });
 });
 
-// /checkout route as well needed
-// hotel booking pachi
-// current itineraries and then clicking on one and then joining tables to display details
+app.get('/checkout', (req, res) => {
+  pool.query("SELECT Itinerary_Id, Destinations.Destinations_Id, Destination_Name FROM Itinerary INNER JOIN Hotels ON Itinerary.Hotel_Id = Hotels.Hotel_Id INNER JOIN Destinations ON Destinations.Destinations_Id = Hotels.Destinations_Id WHERE User_Id = 5", [userId], (error, results, fields) => {
+    if (error) {
+      res.status(500).json({ error: "An error occurred while joining the tables and fetching itinerary ids, destinations and destinationsids" });
+    } else if (results.length > 0) {
+      res.json(results);
+    } else {
+      res.status(404).json({ error: "No data for this user" });
+    }
+  });
+});
 
-// destination ids and destination names have to send
-// app.get('/checkout', (req, res) => {
-//   pool.query
-// })
+// current itineraries and then clicking on one and then joining tables to display details
 
 // STILL NEED TO CHECK THAT UPDATEITINERARY IS WORKING EMNEM AS WELL
