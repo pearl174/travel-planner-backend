@@ -258,6 +258,18 @@ app.get('/checkout', (req, res) => {
   });
 });
 
-// current itineraries and then clicking on one and then joining tables to display details
+app.get('/getItineraryPlaces/:itineraryId', (req, res) => {
+  const itineraryID = req.params.itineraryId;
+  pool.query("SELECT Name, Price, Hotel_Name, Date, Description FROM Itinerary INNER JOIN Day_to_Day ON Day_to_Day.Itinerary_Id = Itinerary.Itinerary_Id INNER JOIN Hotels ON Hotels.Hotel_Id = Itinerary.Hotel_Id INNER JOIN Places ON Places.Places_Id = Day_to_Day.Places_Id WHERE Itinerary.Itinerary_Id = (?)", [itineraryID], (error, results, fields) => {
+    if (error) {
+      console.log(error);
+      res.status(500).json({ error: "An error occurred while joining all the tables for the final query" });
+    } else if (results.length > 0) {
+      res.json(results);
+    } else {
+      res.status(404).json({ error: "No data for this itinerary id" });
+    }
+  });
+});
 
 // STILL NEED TO CHECK THAT UPDATEITINERARY IS WORKING EMNEM AS WELL
